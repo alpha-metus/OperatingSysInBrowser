@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web-Based Window System</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .window {
+            position: absolute;
+            width: 300px;
+            height: 200px;
+            background-color: #ffffff;
+            border: 1px solid #000000;
+        }
+
+	.resizeable {
+            resize: both;
+            overflow: auto;
+        }
+
+        
+        .window .title-bar {
+            background-color: #cccccc;
+            height: 20px;
+            padding: 5px;
+            cursor: move;
+        }
+        
+        .window .title-bar .title {
+            display: inline-block;
+            margin-right: 5px;
+        }
+        
+        .window .title-bar .buttons {
+            display: inline-block;
+        }
+        
+        .window .content {
+            padding: 10px;
+        }
+        
+        .taskbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #f0f0f0;
+            border-top: 1px solid #000000;
+            padding: 5px;
+            display: flex;
+            justify-content: flex-end;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            z-index: 2;
+        }
+        
+        .taskbar .taskbar-button {
+            display: inline-block;
+            margin-right: 10px;
+            padding: 5px;
+            background-color: #ffffff;
+            border: 1px solid #000000;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        
+        #background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            object-fit: cover;
+        }
+        
+        .start-button {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            width: 40px;
+            height: 40px;
+            background-color: #ffffff;
+            border: 1px solid #000000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .create-window-button {
+            display: inline-block;
+            margin-left: 10px;
+            padding: 5px;
+            background-color: #ffffff;
+            border: 1px solid #000000;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        
+        .start-menu {
+            position: absolute;
+            bottom: 55px;
+            left: 10px;
+            width: 200px;
+            background-color: #ffffff;
+            border: 1px solid #000000;
+            display: none;
+        }
+        
+        .start-menu ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .start-menu ul li {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #000000;
+        }
+        
+        .start-menu ul li:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div id="background"></div>
+    
+    <div class="taskbar">
+        <div class="start-button" onclick="toggleStartMenu()">
+            <img src="favicon.ico" alt="Start" width="30" height="30">
+        </div>
+        <div class="create-window-button" onclick="createWindow()">+</div>
+        <div class="start-menu">
+            <ul>
+                <li onclick="shutdown()">Shutdown</li>
+                <li onclick="restart()">Restart</li>
+                <li onclick="logoff()">Log Off</li>
+            </ul>
+        </div>
+    </div>
+
+<video id="background" autoplay muted>
+  <source src="video.webm" type="video/webm"
+</video>
+    
+    <script>
+        var zIndexCounter = 1;
+
+        function createWindow() {
+            var windowDiv = document.createElement('div');
+            windowDiv.className = 'window';
+	    windowDiv.className = 'window resizeable';
+            windowDiv.style.left = Math.random() * 400 + 'px';
+            windowDiv.style.top = Math.random() * 400 + 'px';
+            windowDiv.style.zIndex = zIndexCounter++;
+            
+            var titleBar = document.createElement('div');
+            titleBar.className = 'title-bar';
+            
+            var title = document.createElement('span');
+            title.className = 'title';
+            title.innerHTML = 'Window ' + zIndexCounter;
+            
+            var buttons = document.createElement('div');
+            buttons.className = 'buttons';
+            
+            var minimizeButton = document.createElement('button');
+            minimizeButton.innerHTML = '-';
+            minimizeButton.onclick = function() {
+                windowDiv.style.display = 'none';
+                windowDiv.style.zIndex = 0;
+            };
+            
+            var maximizeButton = document.createElement('button');
+            maximizeButton.innerHTML = '+';
+            maximizeButton.onclick = function() {
+                if (windowDiv.style.width === '100%' && windowDiv.style.height === '100%') {
+                    windowDiv.style.width = '300px';
+                    windowDiv.style.height = '200px';
+                } else {
+                    windowDiv.style.width = '100%';
+                    windowDiv.style.height = '100%';
+                }
+            };
+            
+            var closeButton = document.createElement('button');
+            closeButton.innerHTML = 'x';
+            closeButton.onclick = function() {
+                document.body.removeChild(windowDiv);
+                removeTaskbarButton(windowDiv);
+            };
+            
+            buttons.appendChild(minimizeButton);
+            buttons.appendChild(maximizeButton);
+            buttons.appendChild(closeButton);
+            
+            titleBar.appendChild(title);
+            titleBar.appendChild(buttons);
+            
+            var content = document.createElement('div');
+            content.className = 'content';
+            content.innerHTML = '<iframe width="100%" height="100%" src="https://www.youtube.com/embed/ryN_sBlTmM4" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>';
+
+            windowDiv.appendChild(titleBar);
+            windowDiv.appendChild(content);
+            
+            document.body.appendChild(windowDiv);
+            
+            makeDraggable(windowDiv, titleBar);
+            createTaskbarButton(windowDiv);
+        }
+        
+        function makeDraggable(element, handle) {
+            var isDragging = false;
+            var offsetX = 0;
+            var offsetY = 0;
+            
+            handle.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                offsetX = e.clientX - element.offsetLeft;
+                offsetY = e.clientY - element.offsetTop;
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (isDragging) {
+                    element.style.left = (e.clientX - offsetX) + 'px';
+                    element.style.top = (e.clientY - offsetY) + 'px';
+                }
+            });
+            
+            document.addEventListener('mouseup', function() {
+                isDragging = false;
+            });
+        }
+        
+        function createTaskbarButton(windowDiv) {
+            var taskbar = document.querySelector('.taskbar');
+            
+            var button = document.createElement('div');
+            button.className = 'taskbar-button';
+            button.innerHTML = 'Window ' + zIndexCounter;
+            button.onclick = function() {
+                windowDiv.style.display = 'block';
+                windowDiv.style.zIndex = zIndexCounter++;
+            };
+            
+            taskbar.appendChild(button);
+        }
+        
+        function removeTaskbarButton(windowDiv) {
+            var taskbar = document.querySelector('.taskbar');
+            
+            var buttons = taskbar.getElementsByClassName('taskbar-button');
+            for (var i = 0; i < buttons.length; i++) {
+                if (buttons[i].innerHTML === windowDiv.querySelector('.title').innerHTML) {
+                    taskbar.removeChild(buttons[i]);
+                    break;
+                }
+            }
+        }
+        
+        function toggleStartMenu() {
+            var startMenu = document.querySelector('.start-menu');
+            startMenu.style.display = (startMenu.style.display === 'none') ? 'block' : 'none';
+        }
+        
+        function shutdown() {
+            if (confirm("Are you sure you want to shut down?")) {
+                window.close(); // Close the current window
+            }
+        }
+        
+        function restart() {
+            if (confirm("Are you sure you want to restart?")) {
+                location.reload(); // Reload the current page
+            }
+        }
+        
+        function logoff() {
+            if (confirm("Are you sure you want to log off?")) {
+                // Perform log off actions here
+            }
+        }
+    </script>
+</body>
+</html>
